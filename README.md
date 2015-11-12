@@ -5,6 +5,9 @@ network connections.
 
 ## Usage
 
+Documentation is available via
+[![GoDoc](https://godoc.org/github.com/karrick/goperconn?status.svg)](https://godoc.org/github.com/karrick/goperconn).
+
 ```Go
 	package main
 
