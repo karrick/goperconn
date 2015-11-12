@@ -2,17 +2,21 @@ package main
 
 import (
 	"log"
+	"os"
+	"time"
 
 	"github.com/karrick/goperconn"
 )
 
 func main() {
-	warning := func(s string) {
-		log.Printf("WARNING: %s", s)
-	}
+	printer := log.New(os.Stderr, "WARNING: ", 0)
 
-	conn, err := goperconn.New(goperconn.Address("localhost:8080"),
-		goperconn.Warning(warning))
+	// NOTE: Address is required, but all other parameters have defaults.
+	conn, err := goperconn.New(goperconn.Address("echo-server.example.com:7"),
+		goperconn.DialTimeout(5*time.Second),
+		goperconn.Logger(printer),
+		goperconn.RetryMin(time.Second),
+		goperconn.RetryMax(30*time.Second))
 	if err != nil {
 		log.Fatal(err)
 	}

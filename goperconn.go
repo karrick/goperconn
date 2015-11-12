@@ -19,9 +19,6 @@ const DefaultRetryMin = time.Second
 // remote host if the connection drops.
 const DefaultRetryMax = time.Minute
 
-// DefaultDialTimeout determines how long the client waits for a connection before timeout.
-const DefaultDialTimeout = 5 * time.Second
-
 // Configurator is a function that modifies a Conn structure during initialization.
 type Configurator func(*Conn) error
 
@@ -37,6 +34,19 @@ func Address(address string) Configurator {
 func DialTimeout(duration time.Duration) Configurator {
 	return func(c *Conn) error {
 		c.dialTimeout = duration
+		return nil
+	}
+}
+
+// Printer interface exposes the Print method.
+type Printer interface {
+	Print(...interface{})
+}
+
+// Logger specifies an optional logger to invoke to log warning messages.
+func Logger(printer Printer) Configurator {
+	return func(c *Conn) error {
+		c.printer = printer
 		return nil
 	}
 }
@@ -59,24 +69,15 @@ func RetryMax(duration time.Duration) Configurator {
 	}
 }
 
-// Warning specifies the timeout to use when establishing the connection to the remote host.
-func Warning(warning func(string)) Configurator {
-	return func(c *Conn) error {
-		c.warning = warning
-		return nil
-	}
-}
-
 // Conn wraps a net.Conn, providing a pseudo-persistent network connection.
 type Conn struct {
 	net.Conn
 	address     string
-	retryMin    time.Duration
-	retryMax    time.Duration
 	dialTimeout time.Duration
 	jobs        chan *rillJob
-
-	warning func(string)
+	printer     Printer
+	retryMax    time.Duration
+	retryMin    time.Duration
 }
 
 // New returns a Conn structure that wraps the net.Conn connection, and attempts to provide a
@@ -86,16 +87,21 @@ type Conn struct {
 //
 //	import (
 //		"log"
+//		"os"
+//		"time"
+//
 //		"github.com/karrick/goperconn"
 //	)
 //
 //	func main() {
-//		warning := func(s string) {
-//			log.Printf("WARNING: %s", s)
-//		}
+//		printer := log.New(os.Stderr, "WARNING: ", 0)
 //
-//		conn, err := goperconn.New(goperconn.Address("localhost:8080"),
-//			goperconn.Warning(warning))
+//		// NOTE: Address is required, but all other parameters have defaults.
+//		conn, err := goperconn.New(goperconn.Address("echo-server.example.com:7"),
+//			goperconn.DialTimeout(5*time.Second),
+//			goperconn.Logger(printer),
+//			goperconn.RetryMin(time.Second),
+//			goperconn.RetryMax(30*time.Second))
 //		if err != nil {
 //			log.Fatal(err)
 //		}
@@ -115,10 +121,9 @@ type Conn struct {
 //	}
 func New(setters ...Configurator) (*Conn, error) {
 	client := &Conn{
-		dialTimeout: DefaultDialTimeout,
-		retryMin:    DefaultRetryMin,
-		retryMax:    DefaultRetryMax,
-		jobs:        make(chan *rillJob, DefaultJobQueueSize),
+		retryMin: DefaultRetryMin,
+		retryMax: DefaultRetryMax,
+		jobs:     make(chan *rillJob, DefaultJobQueueSize),
 	}
 	for _, setter := range setters {
 		if err := setter(client); err != nil {
@@ -138,12 +143,18 @@ func New(setters ...Configurator) (*Conn, error) {
 		return nil, fmt.Errorf("cannot create Conn with address: %q", client.address)
 	}
 	go func(wrapper *Conn) {
+		var conn net.Conn
+		var err error
 		retry := client.retryMin
 		for {
-			conn, err := net.DialTimeout("tcp", client.address, client.dialTimeout)
+			if client.dialTimeout == 0 {
+				conn, err = net.Dial("tcp", client.address)
+			} else {
+				conn, err = net.DialTimeout("tcp", client.address, client.dialTimeout)
+			}
 			if err != nil {
-				if client.warning != nil {
-					client.warning("cannot connect: " + err.Error())
+				if client.printer != nil {
+					client.printer.Print(ErrDialFailure{client.address, err})
 				}
 				time.Sleep(retry)
 				retry *= 2
@@ -153,9 +164,9 @@ func New(setters ...Configurator) (*Conn, error) {
 				continue
 			}
 
-			closed, err := wrapper.proxy(conn) // doesn't return until err
-			if err != nil && client.warning != nil {
-				client.warning("cannot proxy requests from " + client.address + ": " + err.Error())
+			closed, err := wrapper.proxy(conn)
+			if err != nil && client.printer != nil {
+				client.printer.Print(err)
 			}
 			if closed {
 				return
@@ -206,6 +217,9 @@ func (client *Conn) Read(data []byte) (int, error) {
 
 	result := <-job.results
 	copy(data, job.data)
+	if result.err != nil {
+		result.err = ErrIOError{_read, result.err}
+	}
 	return result.n, result.err
 }
 
@@ -215,6 +229,9 @@ func (client *Conn) Write(data []byte) (int, error) {
 	client.jobs <- job
 
 	result := <-job.results
+	if result.err != nil {
+		result.err = ErrIOError{_write, result.err}
+	}
 	return result.n, result.err
 }
 
@@ -224,5 +241,8 @@ func (client *Conn) Close() error {
 	client.jobs <- job
 
 	result := <-job.results
+	if result.err != nil {
+		result.err = ErrIOError{_close, result.err}
+	}
 	return result.err
 }
