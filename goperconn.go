@@ -60,7 +60,7 @@ func RetryMax(duration time.Duration) Configurator {
 }
 
 // Warning specifies the timeout to use when establishing the connection to the remote host.
-func Warning(warning func(string, ...interface{})) Configurator {
+func Warning(warning func(string)) Configurator {
 	return func(c *Conn) error {
 		c.warning = warning
 		return nil
@@ -76,7 +76,7 @@ type Conn struct {
 	dialTimeout time.Duration
 	jobs        chan *rillJob
 
-	warning func(string, ...interface{})
+	warning func(string)
 }
 
 // New returns a Conn structure that wraps the net.Conn connection, and attempts to provide a
@@ -90,8 +90,8 @@ type Conn struct {
 //	)
 //
 //	func main() {
-//		warning := func(format string, a ...interface{}) {
-//			log.Printf("WARNING: "+format, a...)
+//		warning := func(s string) {
+//			log.Printf("WARNING: %s", s)
 //		}
 //
 //		conn, err := goperconn.New(goperconn.Address("localhost:8080"),
@@ -143,7 +143,7 @@ func New(setters ...Configurator) (*Conn, error) {
 			conn, err := net.DialTimeout("tcp", client.address, client.dialTimeout)
 			if err != nil {
 				if client.warning != nil {
-					client.warning("cannot connect: %s", err)
+					client.warning("cannot connect: " + err.Error())
 				}
 				time.Sleep(retry)
 				retry *= 2
@@ -155,7 +155,7 @@ func New(setters ...Configurator) (*Conn, error) {
 
 			closed, err := wrapper.proxy(conn) // doesn't return until err
 			if err != nil && client.warning != nil {
-				client.warning("cannot proxy requests from %s: %s", client.address, err)
+				client.warning("cannot proxy requests from " + client.address + ": " + err.Error())
 			}
 			if closed {
 				return

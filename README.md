@@ -17,8 +17,8 @@ Documentation is available via
 	)
 
 	func main() {
-		warning := func(format string, a ...interface{}) {
-			log.Printf("WARNING: "+format, a...)
+		warning := func(s string) {
+			log.Printf("WARNING: %s", s)
 		}
 
 		conn, err := goperconn.New(goperconn.Address("localhost:8080"),
