@@ -212,11 +212,10 @@ func (client *Conn) proxy(rwc io.ReadWriteCloser) (bool, error) {
 
 // Read reads data from the connection.
 func (client *Conn) Read(data []byte) (int, error) {
-	job := newRillJob(_read, make([]byte, len(data)))
+	job := newRillJob(_read, data)
 	client.jobs <- job
 
 	result := <-job.results
-	copy(data, job.data)
 	if result.err != nil {
 		result.err = ErrIOError{_read, result.err}
 	}
