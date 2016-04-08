@@ -21,7 +21,7 @@ have reasonalbe defaults and may be elided.
             "os"
             "time"
 
-            "github.com/karrick/goperconn"
+            goperconn "gopkg.in/karrick/goperconn.v1"
         )
 
         func main() {
@@ -60,7 +60,7 @@ connection. If you specify a custom dial timeout, it will use
             "os"
             "time"
 
-            "github.com/karrick/goperconn"
+            goperconn "gopkg.in/karrick/goperconn.v1"
         )
 
         func main() {
@@ -104,7 +104,7 @@ call the logger's Print function.
             "os"
             "time"
 
-            "github.com/karrick/goperconn"
+            goperconn "gopkg.in/karrick/goperconn.v1"
         )
 
         func main() {
@@ -146,7 +146,7 @@ of time between connection retry attempts.
             "os"
             "time"
 
-            "github.com/karrick/goperconn"
+            goperconn "gopkg.in/karrick/goperconn.v1"
         )
 
         func main() {
@@ -189,7 +189,7 @@ invocation.
             "os"
             "time"
 
-            "github.com/karrick/goperconn"
+            goperconn "gopkg.in/karrick/goperconn.v1"
         )
 
         func main() {
