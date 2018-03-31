@@ -7,19 +7,20 @@ import (
 	"time"
 )
 
-// DefaultJobQueueSize specifies the size of the job queue created to support IO operations on the
-// Conn.
+// DefaultJobQueueSize specifies the size of the job queue created to support IO
+// operations on the Conn.
 const DefaultJobQueueSize = 10
 
-// DefaultRetryMin is the default minimum amount of time the client will wait to reconnect to a
-// remote host if the connection drops.
+// DefaultRetryMin is the default minimum amount of time the client will wait to
+// reconnect to a remote host if the connection drops.
 const DefaultRetryMin = time.Second
 
-// DefaultRetryMax is the default maximum amount of time the client will wait to reconnect to a
-// remote host if the connection drops.
+// DefaultRetryMax is the default maximum amount of time the client will wait to
+// reconnect to a remote host if the connection drops.
 const DefaultRetryMax = time.Minute
 
-// Configurator is a function that modifies a Conn structure during initialization.
+// Configurator is a function that modifies a Conn structure during
+// initialization.
 type Configurator func(*Conn) error
 
 // Address changes the network address used by a .
@@ -30,7 +31,8 @@ func Address(address string) Configurator {
 	}
 }
 
-// DialTimeout specifies the timeout to use when establishing the connection to the remote host.
+// DialTimeout specifies the timeout to use when establishing the connection to
+// the remote host.
 func DialTimeout(duration time.Duration) Configurator {
 	return func(c *Conn) error {
 		c.dialTimeout = duration
@@ -38,7 +40,9 @@ func DialTimeout(duration time.Duration) Configurator {
 	}
 }
 
-// Printer interface exposes the Print method.
+// Printer is the interface implemented by an object that allows printing of
+// arbitrary information. It is provided to allow goperconn to accept and use
+// any logging library that implements this interface.
 type Printer interface {
 	Print(...interface{})
 }
@@ -51,8 +55,8 @@ func Logger(printer Printer) Configurator {
 	}
 }
 
-// RetryMin controls the minimum amount of time a Conn will wait between connection attempts to the
-// remote host.
+// RetryMin controls the minimum amount of time a Conn will wait between
+// connection attempts to the remote host.
 func RetryMin(duration time.Duration) Configurator {
 	return func(c *Conn) error {
 		c.retryMin = duration
@@ -60,8 +64,8 @@ func RetryMin(duration time.Duration) Configurator {
 	}
 }
 
-// RetryMax controls the maximum amount of time a Conn will wait between connection attempts to the
-// remote host.
+// RetryMax controls the maximum amount of time a Conn will wait between
+// connection attempts to the remote host.
 func RetryMax(duration time.Duration) Configurator {
 	return func(c *Conn) error {
 		c.retryMax = duration
@@ -80,8 +84,8 @@ type Conn struct {
 	retryMin    time.Duration
 }
 
-// New returns a Conn structure that wraps the net.Conn connection, and attempts to provide a
-// pseudo-persistent connection to a remote host.
+// New returns a Conn structure that wraps the net.Conn connection, and attempts
+// to provide a pseudo-persistent connection to a remote host.
 //
 //	package main
 //
